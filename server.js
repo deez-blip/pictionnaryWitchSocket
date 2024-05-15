@@ -49,6 +49,13 @@ io.on('connection', (socket) => {
         socket.leave(room);
         io.to(room).emit('leave', room);
     });
+
+    socket.on('draw', (data) => {
+        const room = Array.from(socket.rooms)[1]; // Get the room the socket is currently in
+        if (room) {
+            io.to(room).emit('draw', data);
+        }
+    });
 });
 
 server.listen(PORT, () => {
