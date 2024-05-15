@@ -4,20 +4,29 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
     const dataElement = document.querySelector('.data');
+    const chatElement = document.getElementById('chat');
     const socket = io('http://localhost:3001');
     
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d');
     let drawing = false;
     let current = { color: 'black' };
+    let username = localStorage.getItem('username');
+    let role = '';
+
+    if (!username) {
+        window.location.href = '/';
+        return;
+    }
 
     socket.on('connect', () => {
-        console.log('Connected', text, currentRoom, dataElement);
+        console.log('Connected');
     });
 
     socket.on('message', (data) => {
-        console.log('Received message:', data);
-        dataElement.innerText += data + '\n';
+        const msg = `${data.username}: ${data.message}`;
+        console.log('Received message:', msg);
+        chatElement.innerHTML += `<p>${msg}</p>`;
     });
 
     socket.on('draw', (data) => {
@@ -44,7 +53,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     window.sendMessage = () => {
         const message = text.value;
-        socket.emit('room', currentRoom, message);
+        socket.emit('room', currentRoom, { message, username });
         console.log(`Sent message to ${currentRoom}: ${message}`);
     };
 
@@ -78,19 +87,20 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
 
     const onMouseDown = (e) => {
+        if (role !== 'drawer') return;
         drawing = true;
         current.x = e.clientX;
         current.y = e.clientY;
     };
 
     const onMouseUp = (e) => {
-        if (!drawing) { return; }
+        if (!drawing || role !== 'drawer') return;
         drawing = false;
         drawLine(current.x, current.y, e.clientX, e.clientY, current.color, true);
     };
 
     const onMouseMove = (e) => {
-        if (!drawing) { return; }
+        if (!drawing || role !== 'drawer') return;
         drawLine(current.x, current.y, e.clientX, e.clientY, current.color, true);
         current.x = e.clientX;
         current.y = e.clientY;
@@ -112,4 +122,20 @@ document.addEventListener('DOMContentLoaded', (event) => {
     canvas.addEventListener('mouseup', onMouseUp, false);
     canvas.addEventListener('mouseout', onMouseUp, false);
     canvas.addEventListener('mousemove', throttle(onMouseMove, 10), false);
+
+    document.querySelector('#become-drawer').addEventListener('click', () => {
+        socket.emit('role', { role: 'drawer', username });
+    });
+
+    document.querySelector('#become-guesser').addEventListener('click', () => {
+        socket.emit('role', { role: 'guesser', username });
+    });
+
+    socket.on('role', (data) => {
+        role = data.role;
+        const { role: newRole, username } = data;
+        const roleMessage = `${username} is now the ${newRole}`;
+        console.log(roleMessage);
+        chatElement.innerHTML += `<p>${roleMessage}</p>`;
+    });
 });

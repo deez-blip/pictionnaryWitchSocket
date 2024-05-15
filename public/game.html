@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pictionary - Game</title>
+    <style>
+        #chat { height: 200px; overflow-y: scroll; }
+        #drawing-canvas { border: 1px solid #000; cursor: crosshair; }
+    </style>
+</head>
+<body>
+    <p>Current room: <span id="current-room"></span></p>
+    <button onclick="changeRoom()">Change Room</button>
+    <br>
+    <input id="username" placeholder="Enter your username" disabled>
+    <button id="become-drawer">Become Drawer</button>
+    <button id="become-guesser">Become Guesser</button>
+    <br>
+    <div id="chat" class="data"></div>
+    <textarea id="message" cols="30" rows="2"></textarea>
+    <button onclick="sendMessage()">Send Message</button>
+    <br>
+    <!-- Canvas -->
+    <canvas id="drawing-canvas" width="500" height="500" style="border:1px solid #000000;"></canvas>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="scriptServer.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = localStorage.getItem('username');
+            if (!username) {
+                window.location.href = '/';
+                return;
+            }
+            document.getElementById('username').value = username;
+        });
+    </script>
+</body>
+</html>

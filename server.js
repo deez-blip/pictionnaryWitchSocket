@@ -15,8 +15,14 @@ const io = new Server(server, {
 
 app.use(cors());
 
+app.use(express.static('public'));
+
 app.get('/', (req, res) => {
-    res.json('ip address: http://' + ip.address() + ':' + PORT);    
+    res.sendFile(__dirname + '/public/index.html');
+});
+
+app.get('/game.html', (req, res) => {
+    res.sendFile(__dirname + '/public/game.html');
 });
 
 io.on('connection', (socket) => {
@@ -34,7 +40,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('room', (room, msg) => {
-        console.log('(server)room: ' + room + ' message: ' + msg);
+        console.log('(server) room: ' + room + ' message: ' + msg);
         io.to(room).emit('message', msg);
     });
 
@@ -54,6 +60,13 @@ io.on('connection', (socket) => {
         const room = Array.from(socket.rooms)[1]; // Get the room the socket is currently in
         if (room) {
             io.to(room).emit('draw', data);
+        }
+    });
+
+    socket.on('role', (data) => {
+        const room = Array.from(socket.rooms)[1];
+        if (room) {
+            io.to(room).emit('role', data);
         }
     });
 });
