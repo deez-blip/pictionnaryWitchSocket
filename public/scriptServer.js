@@ -3,10 +3,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let currentRoom = '';
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
-    const dataElement = document.querySelector('.data');
     const chatElement = document.getElementById('chat');
     const socket = io('http://localhost:3001');
-    
+
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d');
     let drawing = false;
@@ -30,13 +29,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     socket.on('draw', (data) => {
+        console.log('Drawing data received:', data);
         const { x0, y0, x1, y1, color } = data;
-        ctx.strokeStyle = color;
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.stroke();
-        ctx.closePath();
+        drawLine(x0 * canvas.width, y0 * canvas.height, x1 * canvas.width, y1 * canvas.height, color, false);
+    });
+
+    socket.on('clearCanvas', () => {
+        clearCanvas(false);
     });
 
     socket.on('disconnect', () => {
@@ -44,9 +43,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     window.changeRoom = () => {
+        socket.emit('leave', currentRoom);
         currentRoom = `room${i++}`;
         currentRoomElement.innerText = currentRoom;
-        socket.emit('leave', currentRoom);
         socket.emit('join', currentRoom);
         console.log(`Changed to room: ${currentRoom}`);
     };
@@ -66,6 +65,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     const drawLine = (x0, y0, x1, y1, color, emit) => {
+        console.log(`Drawing line from (${x0}, ${y0}) to (${x1}, ${y1}) with color ${color}`);
         ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
@@ -82,35 +82,44 @@ document.addEventListener('DOMContentLoaded', (event) => {
             y0: y0 / h,
             x1: x1 / w,
             y1: y1 / h,
-            color
+            color,
+            room: currentRoom
         });
+    };
+
+    const clearCanvas = (emit) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!emit) { return; }
+        socket.emit('clearCanvas', { room: currentRoom });
     };
 
     const onMouseDown = (e) => {
         if (role !== 'drawer') return;
         drawing = true;
-        current.x = e.clientX;
-        current.y = e.clientY;
+        current.x = e.clientX - canvas.offsetLeft;
+        current.y = e.clientY - canvas.offsetTop;
+        console.log(`Mouse down at (${current.x}, ${current.y})`);
     };
 
     const onMouseUp = (e) => {
         if (!drawing || role !== 'drawer') return;
         drawing = false;
-        drawLine(current.x, current.y, e.clientX, e.clientY, current.color, true);
+        console.log(`Mouse up at (${e.clientX - canvas.offsetLeft}, ${e.clientY - canvas.offsetTop})`);
+        drawLine(current.x, current.y, e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, current.color, true);
     };
 
     const onMouseMove = (e) => {
         if (!drawing || role !== 'drawer') return;
-        drawLine(current.x, current.y, e.clientX, e.clientY, current.color, true);
-        current.x = e.clientX;
-        current.y = e.clientY;
+        console.log(`Mouse move at (${e.clientX - canvas.offsetLeft}, ${e.clientY - canvas.offsetTop})`);
+        drawLine(current.x, current.y, e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, current.color, true);
+        current.x = e.clientX - canvas.offsetLeft;
+        current.y = e.clientY - canvas.offsetTop;
     };
 
     const throttle = (callback, delay) => {
         let previousCall = new Date().getTime();
         return function() {
             const time = new Date().getTime();
-
             if ((time - previousCall) >= delay) {
                 previousCall = time;
                 callback.apply(null, arguments);
@@ -129,6 +138,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     document.querySelector('#become-guesser').addEventListener('click', () => {
         socket.emit('role', { role: 'guesser', username });
+    });
+
+    document.querySelector('#color-picker').addEventListener('input', (e) => {
+        current.color = e.target.value;
+    });
+
+    document.querySelector('#clear-canvas').addEventListener('click', () => {
+        clearCanvas(true);
     });
 
     socket.on('role', (data) => {

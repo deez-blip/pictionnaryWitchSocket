@@ -57,9 +57,18 @@ io.on('connection', (socket) => {
     });
 
     socket.on('draw', (data) => {
-        const room = Array.from(socket.rooms)[1]; // Get the room the socket is currently in
+        const room = data.room;
+        console.log(`Draw event in room ${room}:`, data);
         if (room) {
             io.to(room).emit('draw', data);
+        }
+    });
+
+    socket.on('clearCanvas', (data) => {
+        const room = data.room;
+        console.log(`Clear canvas event in room ${room}`);
+        if (room) {
+            io.to(room).emit('clearCanvas');
         }
     });
 
