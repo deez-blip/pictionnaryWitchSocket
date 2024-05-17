@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let current = { color: 'black' };
     let username = localStorage.getItem('username');
     let role = '';
+    let lineWidth = 1;
+    let erasing = false;
+    let drawingCircle = false;
+    let filling = false;
 
     if (!username) {
         window.location.href = '/';
@@ -123,6 +127,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const username = document.getElementById('username').value;
         socket.emit('join', currentRoom, username);
         console.log(`Changed to room: ${currentRoom}`);
+        clearWhenChangingRoom();
+    };
+
+    let clearWhenChangingRoom = () => {
+        clearCanvas(true);
+        document.querySelector("#chat").innerHTML = "";
+        document.getElementById("pick-word").style.display = "none";
+        role = "";
+        selectedWord = "";
     };
 
     window.sendMessage = () => {
@@ -136,7 +149,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         socket.emit('room', currentRoom, { message, username });
 
         // Comparer le message normalisé avec le mot sélectionné normalisé
-        if (normalizeString(message.toLowerCase()) === normalizeString(selectedWord.toLowerCase())) {
+        if (role === "guesser" && normalizeString(message.toLowerCase()) === normalizeString(selectedWord.toLowerCase())) {
             socket.emit('wordGuessed', currentRoom);
             alert('Correct! The word has been guessed.');
         } else {
@@ -154,26 +167,149 @@ document.addEventListener('DOMContentLoaded', (event) => {
         console.log(`Left room: ${room}`);
     });
 
+    window.increaseLineWidth = () => {
+        lineWidth = 5;
+        erasing = false;
+    };
+
+    window.decreaseLineWidth = () => {
+        lineWidth = 1;
+        erasing = false;
+    };
+
+    window.toggleEraser = () => {
+        erasing = !erasing;
+        lineWidth = 20;
+    };
+
+    window.toggleCircleDrawing = () => {
+        drawingCircle = !drawingCircle;
+        erasing = false;
+    };
+
+    window.toggleFill = () => {
+        filling = !filling;
+        drawingCircle = false;
+        erasing = false;
+    };
+
+
     const drawLine = (x0, y0, x1, y1, color, emit) => {
-        console.log(`Drawing line from (${x0}, ${y0}) to (${x1}, ${y1}) with color ${color}`);
-        ctx.strokeStyle = color;
+        console.log(
+            `Drawing line from (${x0}, ${y0}) to (${x1}, ${y1}) with color ${color}`
+        );
+        ctx.strokeStyle = erasing ? "white" : color;
+        ctx.lineWidth = lineWidth;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(x1, y1);
         ctx.stroke();
         ctx.closePath();
 
-        if (!emit) { return; }
+        if (!emit) {
+            return;
+        }
         const w = canvas.width;
         const h = canvas.height;
 
-        socket.emit('draw', {
+        socket.emit("draw", {
             x0: x0 / w,
             y0: y0 / h,
             x1: x1 / w,
             y1: y1 / h,
             color,
-            room: currentRoom
+            room: currentRoom,
+        });
+    };
+
+    const drawCircle = (x0, y0, radius, color, lineWidth, emit) => {
+        console.log(
+            `Drawing circle at (${x0}, ${y0}) with radius ${radius} and color ${color}`
+        );
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.arc(x0, y0, radius, 0, Math.PI * 2, false);
+        ctx.stroke();
+        ctx.closePath();
+
+        if (!emit) {
+            return;
+        }
+        const w = canvas.width;
+        const h = canvas.height;
+
+        socket.emit("drawCircle", {
+            x0: x0 / w,
+            y0: y0 / h,
+            radius: radius / Math.sqrt(w * w + h * h), // Normalize radius
+            color,
+            room: currentRoom,
+        });
+    };
+
+    const floodFill = (startX, startY, newColor) => {
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const startPixel = ctx.getImageData(startX, startY, 1, 1);
+        const startColor = startPixel.data;
+        const newColorData = [
+            parseInt(newColor.slice(1, 3), 16),
+            parseInt(newColor.slice(3, 5), 16),
+            parseInt(newColor.slice(5, 7), 16),
+        ];
+        const pixelData = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
+        const pixelsChecked = new Set();
+
+        function checkPixel(x, y) {
+            const idx = (y * canvasWidth + x) * 4;
+            return (
+                pixelData[idx] === startColor[0] &&
+                pixelData[idx + 1] === startColor[1] &&
+                pixelData[idx + 2] === startColor[2]
+            );
+        }
+
+        function drawPixel(x, y) {
+            const idx = (y * canvasWidth + x) * 4;
+            pixelData[idx] = newColorData[0];
+            pixelData[idx + 1] = newColorData[1];
+            pixelData[idx + 2] = newColorData[2];
+        }
+
+        function scanLine(x, y) {
+            let left = x;
+            let right = x;
+            while (left > 0 && checkPixel(left - 1, y)) left--;
+            while (right < canvasWidth - 1 && checkPixel(right + 1, y)) right++;
+            for (let i = left; i <= right; i++) {
+                drawPixel(i, y);
+                pixelsChecked.add(`${i},${y}`);
+            }
+            if (y > 0) {
+                for (let i = left; i <= right; i++) {
+                    if (!pixelsChecked.has(`${i},${y - 1}`) && checkPixel(i, y - 1)) {
+                        scanLine(i, y - 1);
+                    }
+                }
+            }
+            if (y < canvasHeight - 1) {
+                for (let i = left; i <= right; i++) {
+                    if (!pixelsChecked.has(`${i},${y + 1}`) && checkPixel(i, y + 1)) {
+                        scanLine(i, y + 1);
+                    }
+                }
+            }
+        }
+
+        scanLine(startX, startY);
+        ctx.putImageData(new ImageData(pixelData, canvasWidth, canvasHeight), 0, 0);
+
+        socket.emit("floodFill", {
+            x: startX,
+            y: startY,
+            color: newColor,
+            room: currentRoom,
         });
     };
 
@@ -189,33 +325,46 @@ document.addEventListener('DOMContentLoaded', (event) => {
             x: evt.pageX - rect.left - window.scrollX,
             y: evt.pageY - rect.top - window.scrollY
         };
-    };    
-
+    };
     const onMouseDown = (e) => {
-        if (role !== 'drawer') return;
-        drawing = true;
+        if (role !== "drawer") return;
         const pos = getMousePos(canvas, e);
-        current.x = pos.x;
-        current.y = pos.y;
-        console.log(`Mouse down at (${current.x}, ${current.y})`);
+        if (filling) {
+            floodFill(pos.x, pos.y, current.color);
+        } else {
+            drawing = true;
+            current.x = pos.x;
+            current.y = pos.y;
+            console.log(`Mouse down at (${current.x}, ${current.y})`);
+        }
     };
 
     const onMouseUp = (e) => {
-        if (!drawing || role !== 'drawer') return;
+        if (!drawing || role !== "drawer") return;
         drawing = false;
         const pos = getMousePos(canvas, e);
         console.log(`Mouse up at (${pos.x}, ${pos.y})`);
-        drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
+        if (!drawingCircle) {
+            drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
+        } else {
+            const radius = Math.sqrt(
+                Math.pow(pos.x - current.x, 2) + Math.pow(pos.y - current.y, 2)
+            );
+            drawCircle(current.x, current.y, radius, current.color, true);
+        }
     };
 
     const onMouseMove = (e) => {
-        if (!drawing || role !== 'drawer') return;
+        if (!drawing || role !== "drawer") return;
         const pos = getMousePos(canvas, e);
         console.log(`Mouse move at (${pos.x}, ${pos.y})`);
-        drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
-        current.x = pos.x;
-        current.y = pos.y;
+        if (!drawingCircle) {
+            drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
+            current.x = pos.x;
+            current.y = pos.y;
+        }
     };
+
 
     const throttle = (callback, delay) => {
         let previousCall = new Date().getTime();
