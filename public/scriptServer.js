@@ -183,30 +183,38 @@ document.addEventListener('DOMContentLoaded', (event) => {
         socket.emit('clearCanvas', { room: currentRoom });
     };
 
+    const getMousePos = (canvas, evt) => {
+        var rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.pageX - rect.left - window.scrollX,
+            y: evt.pageY - rect.top - window.scrollY
+        };
+    };    
+
     const onMouseDown = (e) => {
         if (role !== 'drawer') return;
         drawing = true;
-        const rect = canvas.getBoundingClientRect();
-        current.x = e.clientX - rect.left;
-        current.y = e.clientY - rect.top;
+        const pos = getMousePos(canvas, e);
+        current.x = pos.x;
+        current.y = pos.y;
         console.log(`Mouse down at (${current.x}, ${current.y})`);
     };
 
     const onMouseUp = (e) => {
         if (!drawing || role !== 'drawer') return;
         drawing = false;
-        const rect = canvas.getBoundingClientRect();
-        console.log(`Mouse up at (${e.clientX - rect.left}, ${e.clientY - rect.top})`);
-        drawLine(current.x, current.y, e.clientX - rect.left, e.clientY - rect.top, current.color, true);
+        const pos = getMousePos(canvas, e);
+        console.log(`Mouse up at (${pos.x}, ${pos.y})`);
+        drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
     };
 
     const onMouseMove = (e) => {
         if (!drawing || role !== 'drawer') return;
-        const rect = canvas.getBoundingClientRect();
-        console.log(`Mouse move at (${e.clientX - rect.left}, ${e.clientY - rect.top})`);
-        drawLine(current.x, current.y, e.clientX - rect.left, e.clientY - rect.top, current.color, true);
-        current.x = e.clientX - rect.left;
-        current.y = e.clientY - rect.top;
+        const pos = getMousePos(canvas, e);
+        console.log(`Mouse move at (${pos.x}, ${pos.y})`);
+        drawLine(current.x, current.y, pos.x, pos.y, current.color, true);
+        current.x = pos.x;
+        current.y = pos.y;
     };
 
     const throttle = (callback, delay) => {

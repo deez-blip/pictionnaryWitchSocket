@@ -1,27 +1,124 @@
-/* The Modal (background) */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    overflow: hidden; /* Empêche le défilement */
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+#drawing-container {
+    padding-left: 1em;
+    padding-top: 1em;
+    width: 55%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: #ffffff;
+    padding-right: 2%;
+    box-sizing: border-box;
+}
+
+#container-1, #container-2, #container-3 {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#container-1, #container-2 {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#container-3 {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+#chat-container {
+    padding-right: 1em;
+    padding-top: 1em;
+    width: 45%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    background-color: #ffffff;
+    padding-left: 2%;
+    box-sizing: border-box;
+}
+
+#drawing-canvas {
+    width: 100%;
+    height: calc(70vh - 20px); /* Ajuste la hauteur pour tenir dans l'écran avec un espace en bas */
+    border: 1px solid #000;
+    cursor: crosshair;
+    margin: 0;
+    padding: 0;
+    display: block;
+    box-sizing: border-box; /* Inclut les bordures et le padding dans la taille de l'élément */
+}
+
+
+#chat {
+    height: 80%;
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+#message {
+    width: 100%;
+}
+
+button {
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    background-color: #007BFF;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
 .modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 1;
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0,0.4);
 }
 
-/* Modal Content/Box */
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto; /* 15% from the top and centered */
+    margin: 15% auto;
     padding: 20px;
     border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
+    width: 80%;
 }
 
-/* The Close Button */
 .close {
     color: #aaa;
     float: right;
@@ -29,23 +126,8 @@
     font-weight: bold;
 }
 
-.close:hover,
-.close:focus {
+.close:hover, .close:focus {
     color: black;
     text-decoration: none;
     cursor: pointer;
-}
-
-.modal_open_button {
-    border: 1px solid black;
-    background-color: white;
-    height: 50px;
-}
-
-.modal_open_button:hover {
-    background-color: #ddd;
-}
-
-#pick-word{
-    display: none;
 }
