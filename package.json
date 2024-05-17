@@ -12,11 +12,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "browserify": "^17.0.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "http-server": "^14.1.1",
     "ip": "^2.0.1",
-    "random-words": "^2.0.1",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "word-pictionary-list": "^1.0.4"
   }
 }
