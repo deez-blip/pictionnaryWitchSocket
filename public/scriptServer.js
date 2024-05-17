@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', (event) => {
     let i = 0;
     let currentRoom = '';
+    let selectedWord = ''; // Variable pour stocker le mot sélectionné localement
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
     const chatElement = document.getElementById('chat');
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
                 // Display the selected word to all users in the room
                 socket.emit('selectedWordToServer', { word: word, room: currentRoom });
-                console.log('done')
+                console.log('done');
                 modal.style.display = 'none';
             });
             modalButtonsContainer.appendChild(button);
@@ -78,9 +79,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
     // ? MODAL POP UP END
 
     // Display the selected word to all users in the room
-    socket.on('selectedWord', (word) => {
+    socket.on('selectedWord', (data) => {
         const selectedWordElement = document.getElementById('selected-word');
-        selectedWordElement.textContent = `Selected word: ${word}`;
+        if (role === 'drawer') {
+            selectedWordElement.textContent = `Selected word: ${data.word}`;
+        } else {
+            selectedWordElement.textContent = `Selected word: ${'-'.repeat(data.word.length)}`; // Affiche le mot masqué
+        }
+        selectedWord = data.word; // Stocker le mot sélectionné localement
+        console.log(`Mot sélectionné reçu : ${selectedWord}`);
     });
 
     socket.on('connect', () => {
@@ -108,17 +115,35 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     window.changeRoom = () => {
-        socket.emit('leave', currentRoom);
+        if (currentRoom) {
+            socket.emit('leave', currentRoom);
+        }
         currentRoom = `room${i++}`;
         currentRoomElement.innerText = currentRoom;
-        socket.emit('join', currentRoom);
+        const username = document.getElementById('username').value;
+        socket.emit('join', currentRoom, username);
         console.log(`Changed to room: ${currentRoom}`);
     };
 
     window.sendMessage = () => {
         const message = text.value;
+        console.log(`Message envoyé : ${message}`);
+        console.log(`Mot sélectionné : ${selectedWord}`);
+
+        // Normaliser les chaînes pour supprimer les accents avant comparaison
+        const normalizeString = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+
         socket.emit('room', currentRoom, { message, username });
-        console.log(`Sent message to ${currentRoom}: ${message}`);
+
+        // Comparer le message normalisé avec le mot sélectionné normalisé
+        if (normalizeString(message.toLowerCase()) === normalizeString(selectedWord.toLowerCase())) {
+            socket.emit('wordGuessed', currentRoom);
+            alert('Correct! The word has been guessed.');
+        } else {
+            console.log('Mot incorrect');
+        }
+
+        text.value = '';
     };
 
     socket.on('join', (room) => {
@@ -226,5 +251,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const roleMessage = `${username} is now the ${newRole}`;
         console.log(roleMessage);
         chatElement.innerHTML += `<p>${roleMessage}</p>`;
+
+        if (newRole === 'drawer') {
+            document.getElementById("pick-word").style.display = "block";
+        } else {
+            document.getElementById("pick-word").style.display = "none";
+        }
     });
 });

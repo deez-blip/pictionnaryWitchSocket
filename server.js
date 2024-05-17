@@ -14,7 +14,6 @@ const io = new Server(server, {
 });
 
 app.use(cors());
-
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
@@ -25,13 +24,63 @@ app.get("/game.html", (req, res) => {
     res.sendFile(__dirname + "/public/game.html");
 });
 
+let rooms = {};
+
+function assignDrawer(room) {
+    if (rooms[room].players.length < 2) return;
+
+    const currentDrawerIndex = rooms[room].currentDrawerIndex;
+    const players = rooms[room].players;
+
+    io.to(players[currentDrawerIndex].id).emit("role", { role: "drawer", username: players[currentDrawerIndex].username });
+    players.forEach((player, index) => {
+        if (index !== currentDrawerIndex) {
+            io.to(player.id).emit("role", { role: "guesser", username: player.username });
+        }
+    });
+}
+
 io.on("connection", (socket) => {
     console.log("(server) a user connected");
-    socket.broadcast.emit("user connected");
+
+    socket.on("join", (room, username) => {
+        socket.join(room);
+        socket.username = username; // Stocker le nom d'utilisateur dans la socket
+        if (!rooms[room]) {
+            rooms[room] = { players: [], currentDrawerIndex: 0, selectedWord: '' };
+        }
+        rooms[room].players.push({ id: socket.id, username });
+
+        if (rooms[room].players.length >= 2) {
+            assignDrawer(room);
+        }
+        console.log(`(server) user ${username} joined room: ${room}`);
+    });
+
+    socket.on("leave", (room) => {
+        socket.leave(room);
+        if (rooms[room]) {
+            rooms[room].players = rooms[room].players.filter(player => player.id !== socket.id);
+            if (rooms[room].players.length < 2) {
+                rooms[room].currentDrawerIndex = 0; // Réinitialiser l'index du dessinateur
+            }
+        }
+        console.log(`(server) user left room: ${room}`);
+    });
 
     socket.on("disconnect", () => {
         console.log("(server) user disconnected");
-        socket.broadcast.emit("user disconnected");
+        for (let room in rooms) {
+            rooms[room].players = rooms[room].players.filter(player => player.id !== socket.id);
+            if (rooms[room].players.length < 2) {
+                rooms[room].currentDrawerIndex = 0;
+            }
+        }
+    });
+
+    socket.on("wordGuessed", (room) => {
+        rooms[room].currentDrawerIndex = (rooms[room].currentDrawerIndex + 1) % rooms[room].players.length;
+        assignDrawer(room);
     });
 
     socket.on("message", (msg) => {
@@ -42,18 +91,6 @@ io.on("connection", (socket) => {
     socket.on("room", (room, msg) => {
         console.log("(server) room: " + room + " message: " + msg);
         io.to(room).emit("message", msg);
-    });
-
-    socket.on("join", (room) => {
-        console.log("(server) join room: " + room);
-        socket.join(room);
-        io.to(room).emit("join", room);
-    });
-
-    socket.on("leave", (room) => {
-        console.log("(server) leave room: " + room);
-        socket.leave(room);
-        io.to(room).emit("leave", room);
     });
 
     socket.on("draw", (data) => {
@@ -73,11 +110,15 @@ io.on("connection", (socket) => {
     });
 
     socket.on("selectedWordToServer", (data) => {
-        console.log('selected words', data);
         const room = data.room;
+        const word = data.word;
         if (room) {
-            console.log(`Selected word in room ${room}: ${data.word}`);
-            io.to(room).emit("selectedWord", data.word);
+            rooms[room].selectedWord = word; // Stocker le mot sélectionné
+            console.log(`Selected word in room ${room}: ${word}`);
+            rooms[room].players.forEach((player) => {
+                const payload = { word, username: socket.username };
+                io.to(player.id).emit("selectedWord", payload);
+            });
         }
     });
 
