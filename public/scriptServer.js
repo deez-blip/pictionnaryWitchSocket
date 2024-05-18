@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
     const chatElement = document.getElementById('chat');
-    const socket = io('http://localhost:3001');
+    const socket = io('http://10.223.50.48:3001');
 
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d');
