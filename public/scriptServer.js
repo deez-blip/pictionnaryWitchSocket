@@ -321,10 +321,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
 
     const getMousePos = (canvas, evt) => {
-        var rect = canvas.getBoundingClientRect();
+        const rect = canvas.getBoundingClientRect();
+        const style = window.getComputedStyle(canvas);
+        const paddingLeft = parseInt(style.paddingLeft);
+        const paddingTop = parseInt(style.paddingTop);
         return {
-            x: evt.pageX - rect.left - window.scrollX,
-            y: evt.pageY - rect.top - window.scrollY
+            x: evt.clientX - rect.left - paddingLeft,
+            y: evt.clientY - rect.top - paddingTop
         };
     };
     const onMouseDown = (e) => {
