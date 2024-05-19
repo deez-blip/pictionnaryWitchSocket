@@ -49,7 +49,7 @@
         <div id="chat-container">
             <div id="chat" class="data"></div>
             <textarea id="message" cols="30" rows="2"></textarea>
-            <button onclick="sendMessage()">Send Message</button>
+            <button id="send-button" onclick="sendMessage()">Send Message</button>
         </div>
     </div>
 
@@ -66,6 +66,13 @@
             }
             document.getElementById('username').value = username;
         });
+
+        document.getElementById('message').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
     </script>
 </body>
 
