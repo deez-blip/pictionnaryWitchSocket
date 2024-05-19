@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let i = 0;
     let currentRoom = '';
     let selectedWord = ''; // Variable pour stocker le mot sélectionné localement
+    let currentDrawer = ''; // Variable pour stocker le dessinateur actuel
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
     const chatElement = document.getElementById('chat');
@@ -137,6 +138,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         document.getElementById("pick-word").style.display = "none";
         role = "";
         selectedWord = "";
+        currentDrawer = '';
     };
 
     window.sendMessage = () => {
@@ -323,14 +325,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const getMousePos = (canvas, evt) => {
         const rect = canvas.getBoundingClientRect();
         const style = window.getComputedStyle(canvas);
-        const paddingLeft = parseInt(style.paddingLeft);
-        const paddingTop = parseInt(style.paddingTop);
-        return {
-            x: evt.clientX - rect.left - paddingLeft,
-            y: evt.clientY - rect.top - paddingTop
-        };
+        const borderLeftWidth = parseInt(style.borderLeftWidth, 10);
+        const borderTopWidth = parseInt(style.borderTopWidth, 10);
+        const paddingLeft = parseInt(style.paddingLeft, 10);
+        const paddingTop = parseInt(style.paddingTop, 10);
+        const x = evt.clientX - rect.left - borderLeftWidth - paddingLeft;
+        const y = evt.clientY - rect.top - borderTopWidth - paddingTop;
+        return { x, y };
     };
     
+
     const onMouseDown = (e) => {
         if (role !== "drawer") return;
         const pos = getMousePos(canvas, e);
@@ -388,15 +392,23 @@ document.addEventListener('DOMContentLoaded', (event) => {
     canvas.addEventListener('mousemove', throttle(onMouseMove, 10), false);
 
     document.querySelector('#become-drawer').addEventListener('click', () => {
+        if (currentDrawer) {
+            alert('Il y a déjà un dessinateur !');
+            return;
+        }
         socket.emit('role', { role: 'drawer', username });
         document.getElementById("pick-word").style.display = "block";
         role = 'drawer';
+        currentDrawer = username;
     });
 
     document.querySelector('#become-guesser').addEventListener('click', () => {
         socket.emit('role', { role: 'guesser', username });
         document.getElementById("pick-word").style.display = "none";
         role = 'guesser';
+        if (currentDrawer === username) {
+            currentDrawer = '';
+        }
     });
 
     document.querySelector('#color-picker').addEventListener('input', (e) => {
@@ -415,6 +427,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         chatElement.innerHTML += `<p>${roleMessage}</p>`;
 
         if (newRole === 'drawer') {
+            currentDrawer = username;
             document.getElementById("pick-word").style.display = "block";
         } else {
             document.getElementById("pick-word").style.display = "none";
