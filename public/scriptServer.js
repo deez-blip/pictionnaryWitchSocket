@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const currentRoomElement = document.querySelector('#current-room');
     const chatElement = document.getElementById('chat');
     // const socket = io('http://10.223.50.48:3001');
-    const socket = io('https://pictionnarywitchsocket.onrender.com');
+    const socket = io('http://localhost:3001');
 
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d');
@@ -321,13 +321,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
 
     const getMousePos = (canvas, evt) => {
-        const rect = canvas.getBoundingClientRect();
-        const style = window.getComputedStyle(canvas);
-        const paddingLeft = parseInt(style.paddingLeft);
-        const paddingTop = parseInt(style.paddingTop);
+        var rect = canvas.getBoundingClientRect();
         return {
-            x: evt.clientX - rect.left - paddingLeft,
-            y: evt.clientY - rect.top - paddingTop
+            x: evt.pageX - rect.left - window.scrollX,
+            y: evt.pageY - rect.top - window.scrollY
         };
     };
     const onMouseDown = (e) => {
