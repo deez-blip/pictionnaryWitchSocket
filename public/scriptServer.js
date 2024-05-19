@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let i = 0;
     let currentRoom = '';
     let selectedWord = ''; // Variable pour stocker le mot sélectionné localement
-    let currentDrawer = ''; // Variable pour stocker le dessinateur actuel
     const text = document.querySelector('#message');
     const currentRoomElement = document.querySelector('#current-room');
     const chatElement = document.getElementById('chat');
@@ -138,7 +137,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         document.getElementById("pick-word").style.display = "none";
         role = "";
         selectedWord = "";
-        currentDrawer = '';
     };
 
     window.sendMessage = () => {
@@ -333,7 +331,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const y = evt.clientY - rect.top - borderTopWidth - paddingTop;
         return { x, y };
     };
-    
 
     const onMouseDown = (e) => {
         if (role !== "drawer") return;
@@ -392,23 +389,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
     canvas.addEventListener('mousemove', throttle(onMouseMove, 10), false);
 
     document.querySelector('#become-drawer').addEventListener('click', () => {
-        if (currentDrawer) {
-            alert('Il y a déjà un dessinateur !');
-            return;
-        }
         socket.emit('role', { role: 'drawer', username });
         document.getElementById("pick-word").style.display = "block";
         role = 'drawer';
-        currentDrawer = username;
     });
 
     document.querySelector('#become-guesser').addEventListener('click', () => {
         socket.emit('role', { role: 'guesser', username });
         document.getElementById("pick-word").style.display = "none";
         role = 'guesser';
-        if (currentDrawer === username) {
-            currentDrawer = '';
-        }
     });
 
     document.querySelector('#color-picker').addEventListener('input', (e) => {
@@ -427,7 +416,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
         chatElement.innerHTML += `<p>${roleMessage}</p>`;
 
         if (newRole === 'drawer') {
-            currentDrawer = username;
             document.getElementById("pick-word").style.display = "block";
         } else {
             document.getElementById("pick-word").style.display = "none";
